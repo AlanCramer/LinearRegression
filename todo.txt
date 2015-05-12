@@ -1,0 +1,16 @@
+
+Step 1 - Get some data
+
+web scraper for realtor
+
+Step 2 - graph it
+
+Step 3 - calculate J(t0, t1)
+
+Step 4 - graph that
+
+Step 5 - Gradient Decsent
+
+
+
+
