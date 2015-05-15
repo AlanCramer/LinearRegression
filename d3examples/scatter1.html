@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+
+.bar {
+  fill: steelblue;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+button {
+    background-color: steelblue;
+    color: #ffffff;
+    font-family:Arial;
+    font-size:15px;
+    padding:5px 25px;
+    border-radius:15px;
+    border:#000000;
+}
+    
+button:hover {
+	background-color:#2299dd;
+}
+
+
+</style>
+
+<head>
+    <script src="d3.min.js"></script>
+    <script src="numeric-1.2.6.min.js"></script>
+    <script src="jquery-2.1.1.min.js"></script>
+    <script src="regress.js"></script>
+</head>
+
+<body>
+<button id="loadData" onclick="OnLoadData()">Load Data File</button>
+<span id="bub"> Status Info </span>
+<br>
+<svg class="chart"></svg>
+
+<input type="file" id="opendatafile" name="datafile" style="display:none"/>
+
+
+
+
+<script>
+    window.onload = function() {
+        document.getElementById('opendatafile').addEventListener('change', loadDataFile, false);
+   
+    };
+    
+    var loadDataFile = function (evt) {
+    
+        var files = evt.target.files; // FileList object
+        var file = files[0];
+        
+        var fileReadAsDataUrl = new FileReader();
+        fileReadAsDataUrl.onload = (function(progEvt) {
+            var dataString = progEvt.target.result;
+            var tsv64 = dataString.replace("data:;base64,", "");
+            var tsv = atob(tsv64);
+            
+            updateChart(tsv);
+        });
+        
+        fileReadAsDataUrl.readAsDataURL(file);    
+    };
+    
+function OnLoadData() {
+    var fileElem = document.getElementById("opendatafile");
+    fileElem.click();
+};
+
+function updateChart(dataString) {
+
+    var margin = {top: 20, right: 30, bottom: 30, left: 40},
+        width = 500 - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+    
+    var chart = d3.select(".chart")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        
+    var data = d3.tsv.parse(dataString, type);
+        
+    var x = d3.scale.linear()
+        .domain([0, d3.max(data, function(d) { return d.name; })])
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .domain([0, d3.max(data, function(d) { return d.value; })])
+        .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom")
+        .tickSize([6]);
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient("left")
+        .ticks(10);
+    
+    chart.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("transform", "translate(0, 30)")
+      .attr("x", width)
+      .attr("dx", ".71em")
+      .style("text-anchor", "end")
+      .text("x-axis label");
+
+    chart.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("y-axis label");
+    
+    chart.selectAll(".bar")
+      .data(data)
+    .enter().append("circle")
+      .attr("class", "bar")
+      .attr("cx", function(d) { return x(d.name); })
+      .attr("cy", function(d) { return y(d.value); })
+      .attr("r", 3)
+
+    var linedata = [{x:1, y:.08}, {x:9, y:.01}];
+    var line = chart.append("line")
+        .attr("x1", x(linedata[0].x))
+        .attr("y1", y(linedata[0].y))
+        .attr("x2", x(linedata[1].x))
+        .attr("y2", y(linedata[1].y))
+        .attr("stroke", "black");
+
+};
+
+function type(d) {
+  d.value = +d.value; // coerce to number
+  return d;
+};
+
+</script>
+</body>
