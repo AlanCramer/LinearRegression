@@ -60,28 +60,34 @@ function regressStep(J, theta, alpha) {
 }
 
 // same thing, but with only 2 variables
-function regress2vec(hyp, t0, t1, alpha, data) {
+function regress2vec( data) {
     
     // https://www.coursera.org/learn/machine-learning/lecture/kCvQc/gradient-descent-for-linear-regression
     // at minute 3:30
     // repeat until convergence regressStep2vec
+    var t0 = 0;
+    var t1 = 0;
+    var alpha = .01;
+    var hyp = fitFn(t0, t1);
     
-    var ti = [t0, t1];
-    var alpha = 1;
     var done = false;
+    var ct = 0;
+    var errorData = [];
     
-    while(!done) {
+    while(ct < 1000) {
+        
         var tip1 = regressStep2vec(hyp, t0, t1, alpha, data);
+             
+        t0 = tip1[0];
+        t1 = tip1[1];
+        hyp = fitFn(t0, t1);
         
-        err = 0;
-        ti.forEach( function(t, i) { 
-            err += Math.abs(t - tip1[i]);
-        });
-        
-        if (err < .001) {// what val???
-            done = true;
-        }
+        var err = costFn(hyp, data);
+        errorData.push({x:ct, y: err});     
+        ct++;        
     }
+    
+    return {t0: t0, t1: t1, errorData: errorData};
 }
 
 function regressStep2vec(hyp, t0, t1, alpha, data) {
@@ -95,11 +101,9 @@ function regressStep2vec(hyp, t0, t1, alpha, data) {
     var sum1 = 0;
     
     data.forEach(function(pt, i) {
-        var term0 = (hyp(pt.x) - pt.y)*(hyp(pt.x) - pt.y);
-        sum0 += term0;
-        
-        var term1 = (hyp(pt.x) - pt.y)*(hyp(pt.x) - pt.y)*pt.x;
-        sum1 += term1;
+        var termi = hyp(pt.x) - pt.y;
+        sum0 += termi;
+        sum1 += termi * pt.x;
     });
     
     var t0p = t0 - c*sum0;

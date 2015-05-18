@@ -46,7 +46,8 @@ button:hover {
 <button id="loadData" onclick="OnLoadData()">Load Data File</button>
 <span id="bub"> Status Info </span>
 <br>
-<svg class="chart"></svg>
+<svg class="dataChart"></svg>
+<svg class="errorChart"></svg>
 
 <input type="file" id="opendatafile" name="datafile" style="display:none"/>
 
@@ -87,7 +88,7 @@ function updateChart(dataString) {
         width = 500 - margin.left - margin.right,
         height = 400 - margin.top - margin.bottom;
     
-    var chart = d3.select(".chart")
+    var chart = d3.select(".dataChart")
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom)
       .append("g")
@@ -142,11 +143,78 @@ function updateChart(dataString) {
       .attr("cy", function(d) { return y(d.y); })
       .attr("r", 3)
 
-    addFitLine(chart, x, y, data);
+    //addFitLine(chart, x, y, data);
+
+    var res = regress2vec(data);
+    //addFitLine(chart, res.t0, res.t1);
+    drawErrorChart(res.errorData);
+};
+
+function drawErrorChart(errorData) {
+
+    var margin = {top: 20, right: 30, bottom: 30, left: 40},
+        width = 500 - margin.left - margin.right,
+        height = 400 - margin.top - margin.bottom;
+    
+    var chart = d3.select(".errorChart")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+                
+    var x = d3.scale.linear()
+        .domain([0, d3.max(errorData, function(d) { return d.x; })])
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .domain([0, d3.max(errorData, function(d) { return d.y; })])
+        .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom")
+        .tickSize([6]);
+
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient("left")
+        .ticks(10);
+    
+    chart.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("transform", "translate(0, 30)")
+      .attr("x", width)
+      .attr("dx", ".71em")
+      .style("text-anchor", "end")
+      .text("x-axis label");
+
+    chart.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("y-axis label");
+    
+    chart.selectAll(".bar")
+      .data(errorData)
+    .enter().append("circle")
+      .attr("class", "bar")
+      .attr("cx", function(d) { return x(d.x); })
+      .attr("cy", function(d) { return y(d.y); })
+      .attr("r", 3)
 
 };
 
-function addFitLine(chart, x, y, data) {
+// t0 and t1 are thetas. That is, the line to graph is
+// y = t0 + t1*x
+//
+function addFitLine(chart, t0, t1) {
 
     var linedata = [{x:1, y:.08}, {x:9, y:.01}];
     var line = chart.append("line")
@@ -155,9 +223,7 @@ function addFitLine(chart, x, y, data) {
         .attr("x2", x(linedata[1].x))
         .attr("y2", y(linedata[1].y))
         .attr("stroke", "green");
-        
-    fitLine(data);    
-        
+            
 };
 
 function type(d) {
