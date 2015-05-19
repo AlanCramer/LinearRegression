@@ -2,10 +2,25 @@
 <meta charset="utf-8">
 <style>
 
+body {
+    font-family:sans-serif;
+}
 
 .bar {
   fill: steelblue;
 }
+
+.sqDelta {
+
+  fill: #31B404;
+  opacity: .05;
+}
+
+.leastSquaresChart:hover .sqDelta{
+
+    opacity: .15;
+}
+
 
 .axis text {
   font: 10px sans-serif;
@@ -33,22 +48,75 @@ button:hover {
 }
 
 
+li {
+    list-style-type:none;
+}
+li:before { content: "-" };
+
 </style>
 
 <head>
     <script src="d3.min.js"></script>
     <script src="numeric-1.2.6.min.js"></script>
     <script src="jquery-2.1.1.min.js"></script>
+    <script type="text/javascript"
+        src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    
     <script src="regress.js"></script>
+    <script src="addChart.js"></script>
+        
 </head>
 
 <body>
+
+<h1> Machine Learning </h1>
+
+<h2> Least Squares </h2>
+
+<p>How best to interpolate a set of data? 
+<li> Pick the form of the interpolation curve (e.g. line, circle, parabola, piecewise linear, biarcs), 
+<li> define a cost function that describes how far off the interpolation curve is, 
+<li> and then find the solution that minimizes the cost function.
+
+<p>A classic example: linear least squares. That is, given a set of points \(\{(x_i, y_i)\}\) find the line that best fits the data by minimizing the 
+sum of the squares of the errors.
+
+<p> Here's an example chart, the dots are the data points. There are 2 arbitrary lines drawn and the
+sum of the squares of the distances are shown. The question is, which line is better? And, out
+of all lines, which is best?
+
+<p><center><svg class="leastSquaresChart"></svg></center>
+
+<p> Let's repeat this in a mathematical notation: 
+\[  \min_{\theta_0, \theta_1} \sum (h(x_i) - y_i)^2 \quad \text{ where } h(x) = \theta_0 + \theta_1x \]
+
+
+<p> Some gotchas/questions: 
+<li> Are we just considering how far the y's are from the line or is there an error with x as well?
+<li> Should we be trying for the perpendicular distance instead of the y distance?
+<li> Why sum of squares? Why not sum of cubes? Something else?
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Answer hints: Positive, radially symmetric, same answer as euclidean distance
+
+<p> Some extensions:
+<li> What if we want to interpolate with something other than a line?
+<li> What if the data is multi-dimensional? Find a plane that fits a set of points in \(\mathbb R^3\).
+In general, find a hyperplane that fits some n-dimensional data.
+
+
+<p> References
+<li>  Andrew Ng's excellent Coursera course on Machine Learning.
+<li>  Wikipedia
+
+
+<p>Let's give it a try - load a data file:
+<br><br><br>
+
 <button id="loadData" onclick="OnLoadData()">Load Data File</button>
 <span id="bub"> Status Info </span>
 <br>
 <svg class="dataChart"></svg>
 <svg class="errorChart"></svg>
-
 <input type="file" id="opendatafile" name="datafile" style="display:none"/>
 
 
@@ -57,8 +125,12 @@ button:hover {
 <script>
     window.onload = function() {
         document.getElementById('opendatafile').addEventListener('change', loadDataFile, false);
-   
     };
+    
+    function OnLoadData() {
+        var fileElem = document.getElementById("opendatafile");
+        fileElem.click();
+    }; 
     
     var loadDataFile = function (evt) {
     
@@ -70,167 +142,33 @@ button:hover {
             var dataString = progEvt.target.result;
             var tsv64 = dataString.replace("data:;base64,", "");
             var tsv = atob(tsv64);
+            var data = d3.tsv.parse(tsv, type);
             
-            updateChart(tsv);
+            // plot the data
+            var dataPlotInfo = addScatterPlot(".dataChart", data);
+            
+            // calculate regress line and plot it
+            var res = regress2vec(data);
+            addFitLine(dataPlotInfo.chart, res.t0, res.t1, dataPlotInfo.xscale, dataPlotInfo.yscale);
+            addScatterPlot(".errorChart", res.errorData, "Number of Iterations", "Error");
         });
         
         fileReadAsDataUrl.readAsDataURL(file);    
     };
     
-function OnLoadData() {
-    var fileElem = document.getElementById("opendatafile");
-    fileElem.click();
-};
 
-function updateChart(dataString) {
-
-    var margin = {top: 20, right: 30, bottom: 30, left: 40},
-        width = 500 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
+// fill out the example chart
+var data = [{x:1, y:2}, {x:2, y:1}, {x:3, y:3.5}, {x:4, y:3}, {x:5, y:4.5},
+    {x:0.5, y:1}, {x:1.5, y:2}, {x:2.5, y:1.5}, {x:3.5, y:5}, {x:4.5, y:3}]; 
     
-    var chart = d3.select(".dataChart")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-        
-    var data = d3.tsv.parse(dataString, type);
-        
-    var x = d3.scale.linear()
-        .domain([0, d3.max(data, function(d) { return d.x; })])
-        .range([0, width]);
+var lsChartInfo = addScatterPlot(".leastSquaresChart", data,"","");
 
-    var y = d3.scale.linear()
-        .domain([0, d3.max(data, function(d) { return d.y; })])
-        .range([height, 0]);
+addFitLine(lsChartInfo.chart, 1, .25, lsChartInfo.xscale, lsChartInfo.yscale, "green");
+addFitLine(lsChartInfo.chart, .5, .5, lsChartInfo.xscale, lsChartInfo.yscale, "purple");
 
-    var xAxis = d3.svg.axis()
-        .scale(x)
-        .orient("bottom")
-        .tickSize([6]);
+addSquareDeltas(lsChartInfo, data, 1, .25);
 
-    var yAxis = d3.svg.axis()
-        .scale(y)
-        .orient("left")
-        .ticks(10);
-    
-    chart.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis)
-    .append("text")
-      .attr("transform", "translate(0, 30)")
-      .attr("x", width)
-      .attr("dx", ".71em")
-      .style("text-anchor", "end")
-      .text("x-axis label");
 
-    chart.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("y-axis label");
-    
-    chart.selectAll(".bar")
-      .data(data)
-    .enter().append("circle")
-      .attr("class", "bar")
-      .attr("cx", function(d) { return x(d.x); })
-      .attr("cy", function(d) { return y(d.y); })
-      .attr("r", 3)
-
-    //addFitLine(chart, x, y, data);
-
-    var res = regress2vec(data);
-    //addFitLine(chart, res.t0, res.t1);
-    drawErrorChart(res.errorData);
-};
-
-function drawErrorChart(errorData) {
-
-    var margin = {top: 20, right: 30, bottom: 30, left: 40},
-        width = 500 - margin.left - margin.right,
-        height = 400 - margin.top - margin.bottom;
-    
-    var chart = d3.select(".errorChart")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-      .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-                
-    var x = d3.scale.linear()
-        .domain([0, d3.max(errorData, function(d) { return d.x; })])
-        .range([0, width]);
-
-    var y = d3.scale.linear()
-        .domain([0, d3.max(errorData, function(d) { return d.y; })])
-        .range([height, 0]);
-
-    var xAxis = d3.svg.axis()
-        .scale(x)
-        .orient("bottom")
-        .tickSize([6]);
-
-    var yAxis = d3.svg.axis()
-        .scale(y)
-        .orient("left")
-        .ticks(10);
-    
-    chart.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis)
-    .append("text")
-      .attr("transform", "translate(0, 30)")
-      .attr("x", width)
-      .attr("dx", ".71em")
-      .style("text-anchor", "end")
-      .text("x-axis label");
-
-    chart.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("y-axis label");
-    
-    chart.selectAll(".bar")
-      .data(errorData)
-    .enter().append("circle")
-      .attr("class", "bar")
-      .attr("cx", function(d) { return x(d.x); })
-      .attr("cy", function(d) { return y(d.y); })
-      .attr("r", 3)
-
-};
-
-// t0 and t1 are thetas. That is, the line to graph is
-// y = t0 + t1*x
-//
-function addFitLine(chart, t0, t1) {
-
-    var linedata = [{x:1, y:.08}, {x:9, y:.01}];
-    var line = chart.append("line")
-        .attr("x1", x(linedata[0].x))
-        .attr("y1", y(linedata[0].y))
-        .attr("x2", x(linedata[1].x))
-        .attr("y2", y(linedata[1].y))
-        .attr("stroke", "green");
-            
-};
-
-function type(d) {
-  d.x = +d.x; // coerce to number
-  d.y = +d.y; // coerce to number
-  return d;
-};
 
 </script>
 </body>
