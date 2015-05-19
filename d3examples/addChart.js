@@ -7,7 +7,7 @@ function addScatterPlot(chartname, data, xAxisLabel, yAxisLabel) {
     var xlabel = xAxisLabel || "x-axis Label";
     var ylabel = yAxisLabel || "y-axis Label";
 
-    var margin = {top: 20, right: 20, bottom: 30, left: 30},
+    var margin = {top: 20, right: 20, bottom: 30, left: 60},
         width = 450 - margin.left - margin.right,
         height = 450 - margin.top - margin.bottom;
     
@@ -72,21 +72,29 @@ function addSquareDeltas(chartInfo, data, t0, t1) {
     
     var ci = chartInfo;
     
-    ci.chart.selectAll(".sqDelta")
+    var squares = ci.chart.selectAll(".sqDelta")
       .data(data)
     .enter().append("rect")
       .attr("class", "sqDelta")
       .each(function(d) {
+          var term = d.y - (t0 + t1*d.x);
 
-        var term = d.y - (t0 + t1*d.x);
-        
-        d3.select(this).attr({
-          x:  ci.xscale(term > 0 ? d.x : d.x+term),
-          y:  ci.yscale(term > 0 ? d.y : d.y-term),
-          width: ci.xscale (Math.abs(term)),
-          height: 400 - ci.yscale (Math.abs(term))
-        });
+          d3.select(this).attr({
+            x:  ci.xscale(term > 0 ? d.x : d.x+term),
+            y:  ci.yscale(term > 0 ? d.y : d.y-term),
+            width: ci.xscale (Math.abs(term)),
+            height: 400 - ci.yscale (Math.abs(term))
+          });
       });
+      
+    ci.chart.selectAll(".sqLines")
+      .data(data)
+    .enter().append("line")
+      .attr("x1", function(d) { return ci.xscale(d.x) })
+      .attr("y1", function(d) { return ci.yscale(d.y) })
+      .attr("x2", function(d) { return ci.xscale(d.x) })
+      .attr("y2", function(d) { return ci.yscale(t0 + t1*d.x) })
+      .attr("stroke", "black");
 };
 
 
@@ -110,6 +118,8 @@ function addFitLine(chart, t0, t1, x, y, color) {
         .attr("x2", x(x1))
         .attr("y2", y(y1))
         .attr("stroke", lineColor);
+        
+    return line;
 };
 
 function type(d) {

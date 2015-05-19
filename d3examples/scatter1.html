@@ -91,8 +91,13 @@ of all lines, which is best?
 <p> Let's repeat this in a mathematical notation: 
 \[  \min_{\theta_0, \theta_1} \sum (h(x_i) - y_i)^2 \quad \text{ where } h(x) = \theta_0 + \theta_1x \]
 
+<p> This process is not symmetric. Y we are looking at how far the y value is from the data. What happens
+if we flip x and y - do we get the same line? Actually, no.
 
-<p> Some gotchas/questions: 
+<p> Maybe we should be looking at the perpendicular distance to each data point.
+
+<p> Some gotchas/questions:
+<li> What happens if we flip x and y? do we get the same line? 
 <li> Are we just considering how far the y's are from the line or is there an error with x as well?
 <li> Should we be trying for the perpendicular distance instead of the y distance?
 <li> Why sum of squares? Why not sum of cubes? Something else?
@@ -108,8 +113,9 @@ In general, find a hyperplane that fits some n-dimensional data.
 <li>  Andrew Ng's excellent Coursera course on Machine Learning.
 <li>  Wikipedia
 
-
-<p>Let's give it a try - load a data file:
+<p>Let's give it a try - load a data file, and a gradient descent algorithm will iterate to a solution. 
+(or not). Two charts will appear, the first shows the data, and the second shows the magnitude of the 
+error. 
 <br><br><br>
 
 <button id="loadData" onclick="OnLoadData()">Load Data File</button>
@@ -120,6 +126,22 @@ In general, find a hyperplane that fits some n-dimensional data.
 <input type="file" id="opendatafile" name="datafile" style="display:none"/>
 
 
+<h2> Normal Equations </h2>
+
+For a linear fit, we can find the exact solution to the least squares problem. That is, we don't have
+to use an iterative approach like the gradient descent.
+
+The cost function (listed above) is a function that we want to minimize. To minimize it, take the
+derivative and set it to zero. The function is convex, so we get only one local minimum. Very convenient.
+This results in the equation
+
+\[ \left( \mathbf {X^TX} \right) \mathbf {\hat \beta} = \mathbf {X^Ty} \] 
+
+Solving for \(\hat \beta\), 
+
+\[  \mathbf {\hat \beta} = \left( \mathbf {X^TX} \right)^{-1} \mathbf {X^Ty} \] 
+
+In code this would be ...
 
 
 <script>
@@ -146,11 +168,21 @@ In general, find a hyperplane that fits some n-dimensional data.
             
             // plot the data
             var dataPlotInfo = addScatterPlot(".dataChart", data);
-            
+            var previewLine = {};
             // calculate regress line and plot it
             var res = regress2vec(data);
             addFitLine(dataPlotInfo.chart, res.t0, res.t1, dataPlotInfo.xscale, dataPlotInfo.yscale);
-            addScatterPlot(".errorChart", res.errorData, "Number of Iterations", "Error");
+            var ec = addScatterPlot(".errorChart", res.errorData, "Number of Iterations", "Error");
+            var ecBars = ec.chart.selectAll(".bar");
+            ecBars.on("mouseover", function (d) {
+                d3.select(this).attr("r", 6);
+                previewLine = addFitLine(dataPlotInfo.chart, d.t0, d.t1, dataPlotInfo.xscale, dataPlotInfo.yscale);
+               })
+              .on("mouseout", function () {
+                d3.select(this).attr("r", 3);
+                previewLine.remove();
+               });
+               
         });
         
         fileReadAsDataUrl.readAsDataURL(file);    
@@ -164,7 +196,7 @@ var data = [{x:1, y:2}, {x:2, y:1}, {x:3, y:3.5}, {x:4, y:3}, {x:5, y:4.5},
 var lsChartInfo = addScatterPlot(".leastSquaresChart", data,"","");
 
 addFitLine(lsChartInfo.chart, 1, .25, lsChartInfo.xscale, lsChartInfo.yscale, "green");
-addFitLine(lsChartInfo.chart, .5, .5, lsChartInfo.xscale, lsChartInfo.yscale, "purple");
+//addFitLine(lsChartInfo.chart, .5, .5, lsChartInfo.xscale, lsChartInfo.yscale, "purple");
 
 addSquareDeltas(lsChartInfo, data, 1, .25);
 

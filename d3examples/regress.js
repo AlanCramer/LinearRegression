@@ -85,7 +85,7 @@ function regress2vec( data) {
         hyp = fitFn(t0, t1);
         
         var err = costFn(hyp, data);
-        errorData.push({x:ct, y: err});     
+        errorData.push({x:ct, y:err, t0:t0, t1:t1});     
         ct++;        
     }
     
