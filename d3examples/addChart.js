@@ -4,6 +4,21 @@
 //
 function addScatterPlot(chartname, data, xAxisLabel, yAxisLabel) {
 
+    var ci = setUpChart(chartname, data, xAxisLabel, yAxisLabel);
+    
+    ci.chart.selectAll(".bar")
+      .data(data)
+    .enter().append("circle")
+      .attr("class", "bar")
+      .attr("cx", function(d) { return ci.xscale(d.x); })
+      .attr("cy", function(d) { return ci.yscale(d.y); })
+      .attr("r", 3);
+
+    return ci;
+};
+
+function setUpChart(chartname, data, xAxisLabel, yAxisLabel) {
+        
     var xlabel = xAxisLabel || "x-axis Label";
     var ylabel = yAxisLabel || "y-axis Label";
 
@@ -55,17 +70,69 @@ function addScatterPlot(chartname, data, xAxisLabel, yAxisLabel) {
       .attr("dy", ".71em")
       .style("text-anchor", "end")
       .text(ylabel);
-    
-    chart.selectAll(".bar")
-      .data(data)
-    .enter().append("circle")
-      .attr("class", "bar")
-      .attr("cx", function(d) { return x(d.x); })
-      .attr("cy", function(d) { return y(d.y); })
-      .attr("r", 3)
 
     return {chart:chart, xscale:x, yscale:y};
 };
+
+// oh the painful duplication!!
+// chart for x0 vs x1. The diff is the format of the data.
+function setUp2DChart(chartname, data, xAxisLabel, yAxisLabel) {
+        
+    var xlabel = xAxisLabel || "x-axis Label";
+    var ylabel = yAxisLabel || "y-axis Label";
+
+    var margin = {top: 20, right: 20, bottom: 30, left: 60},
+        width = 300 - margin.left - margin.right,
+        height = 300 - margin.top - margin.bottom;
+    
+    var chart = d3.select(chartname)
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        
+    var x0 = d3.scale.linear()
+        .domain([0, d3.max(data, function(d) { return d.x[0]; })])
+        .range([0, width]);
+
+    var x1 = d3.scale.linear()
+        .domain([0, d3.max(data, function(d) { return d.x[1]; })])
+        .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x0)
+        .orient("bottom")
+        .tickSize([6]);
+
+    var yAxis = d3.svg.axis()
+        .scale(x1)
+        .orient("left")
+        .ticks(10);
+    
+    chart.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("transform", "translate(0, 30)")
+      .attr("x", width)
+      .attr("dx", ".71em")
+      .style("text-anchor", "end")
+      .text(xlabel);
+
+    chart.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(ylabel);
+
+    return {chart:chart, x0scale:x0, x1scale:x1};
+};
+
 
 
 function addSquareDeltas(chartInfo, data, t0, t1) {

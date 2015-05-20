@@ -64,6 +64,7 @@ li:before { content: "-" };
     </script>
     
     <script src="regress.js"></script>
+    <script src="gradientDescent.js"></script>
     <script src="addChart.js"></script>
         
 </head>
@@ -158,6 +159,17 @@ The goal is to learn the rules of poker by just looking at the data.
 
 <p> Time for <b>logistic regression.</b>
 
+<p> Let's test my implementation of logisticGradientDescent by creating some test data that 
+looks like
+
+<p><svg class="logRegTest"></svg>
+
+<p> Now, we can run the logistic gradient descent on the same data and see what we get
+for \(\hat \theta\). Maybe a button here would be fun?
+
+<p>
+
+
 <p> One versus All
 
 
@@ -218,7 +230,19 @@ addFitLine(lsChartInfo.chart, 1, .25, lsChartInfo.xscale, lsChartInfo.yscale, "g
 
 addSquareDeltas(lsChartInfo, data, 1, .25);
 
-
-
+var logRegTestData = [ {x:[1,1], y:0}, {x:[.5,.25], y:0},{x:[.4,1.6], y:0},{x:[1.6,.75], y:0},
+   {x:[3,1], y:1}, {x:[2,3], y:1},{x:[1.7,3.2], y:1}, {x:[2.8 ,3], y:1}, {x:[2,2], y:1} ];
+var ci = setUp2DChart(".logRegTest", logRegTestData, "x0", "x1"); 
+    ci.chart.selectAll(".bar")
+      .data(logRegTestData)
+    .enter().append("circle")
+      .attr("fill", function(d) { return d.y === 1 ? "red" : "blue"} )
+      .attr("cx",   function(d) { return ci.x0scale(d.x[0]); })
+      .attr("cy",   function(d) { return ci.x1scale(d.x[1]); })
+      .attr("r", 5);
+   
+var res = logisticGradientDescent(logRegTestData, 100);
+console.log(res);
+   
 </script>
 </body>

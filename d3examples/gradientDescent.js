@@ -28,9 +28,12 @@ function hyperplaneFit(theta) {
 function logisticRegFit(theta) {
 
     return function(x) { // x is an n-dimensional array
+       
+        // calculate the dot product
         var sum = 0;
-        theta.forEach( function (t, i) { sum += t*x[i] });
+        x.forEach( function (xi, i) { sum += theta[i]*xi } );
         
+        // return sigmoid function of dot product
         return 1/(1+ Math.exp(-sum));
     };
 }
@@ -79,12 +82,20 @@ function logisticGradientDescent(data, maxIter) {
     // https://www.coursera.org/learn/machine-learning/lecture/kCvQc/gradient-descent-for-linear-regression
     // at minute 3:30
     // repeat until convergence regressStep2vec
+    
+    // prep the data by prepending a 1 in all the x arrays
+    data.forEach(function(pt, i) {
+        pt.x.splice(0,0,1);
+    });
+    
+    // theta's size is the same as x's (augmented) size
+    // all the x's better be the same
     var theta = [];
-    for (var ti = 0; ti < data.x.length; ++ti) {
+    for (var ti = 0; ti < data[0].x.length; ++ti) {
         theta[ti] = 0;
     }
     
-    var alpha = .01;
+    var alpha = .1;
     var hyp = logisticRegFit(theta);
     
     var done = false;
@@ -93,10 +104,9 @@ function logisticGradientDescent(data, maxIter) {
     
     while(ct < maxIter) {
         
-        // read: tip1 is "theta of i plus 1"
-        var tip1 = gradientDescentStep(hyp, theta, alpha, data);
+        var theta = gradientDescentStep(hyp, theta, alpha, data);
              
-        hyp = logisticRegFit(tip1);
+        hyp = logisticRegFit(theta);
         
         var err = costFnLogisticRegression(hyp, data);
         errorData.push({x:ct, y:err});     
@@ -116,25 +126,32 @@ function logisticGradientDescent(data, maxIter) {
 //
 function gradientDescentStep(hyp, theta, alpha, data) {
 
-    // temp[i] = theta[i] - alpha * d_J/d_theta[i]
-
-    var temp = []; // vector
-    
-    var m = data.length;
-    var c = alpha/m;
-    
     var dJdxi = []; // partial with respect to x[i]
     
-    data.forEach(function(pt, i) {
-        var termi = hyp(pt.x) - pt.y;
-        dJdxi[i] += termi * pt.x[i];
+    // init the partials
+    var n = data[0].x.length;
+    for (var ip = 0; ip < n; ++ip) {
+        dJdxi[ip] = 0;
+    }
+    
+    // calculate the partials
+    dJdxi.forEach(function(partial, j) {
+        
+        var sum = 0;
+        data.forEach(function(pt, i) {
+            sum += (hyp(pt.x) - pt.y)*pt.x[j];
+        });
+        
+        dJdxi[j] += alpha * sum;
     });
     
+    // increment theta by the gradient
     var tp1 = [];
-    theta.forEach(function(ti, i) { tp1[i] = ti - c * dJdxi[i] });
+    theta.forEach(function(ti, i) { 
+        tp1[i] = ti - dJdxi[i] 
+    });
     
     return tp1;
-    
 }
 
 
