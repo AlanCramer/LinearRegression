@@ -125,6 +125,9 @@ error.
 <svg class="errorChart"></svg>
 <input type="file" id="opendatafile" name="datafile" style="display:none"/>
 
+<p> More questions
+<li> Seems like the line quickly finds a pivot point and then takes a long time to find the y-intercept.
+Is that always how it goes? 
 
 <h2> Normal Equations </h2>
 
@@ -135,13 +138,28 @@ The cost function (listed above) is a function that we want to minimize. To mini
 derivative and set it to zero. The function is convex, so we get only one local minimum. Very convenient.
 This results in the equation
 
-\[ \left( \mathbf {X^TX} \right) \mathbf {\hat \beta} = \mathbf {X^Ty} \] 
+\[ \left( \mathbf {X^TX} \right) \mathbf {\hat \theta} = \mathbf {X^Ty} \] 
 
-Solving for \(\hat \beta\), 
+Solving for \(\hat \theta\), 
 
-\[  \mathbf {\hat \beta} = \left( \mathbf {X^TX} \right)^{-1} \mathbf {X^Ty} \] 
+\[  \mathbf {\hat \theta} = \left( \mathbf {X^TX} \right)^{-1} \mathbf {X^Ty} \] 
+
+// REVIEW
+The concise mathematical representation is easy to get lost in. X is a matrix with first column all ones,
+the second column is \(x_i\). So it's n x 2, where n is the number of data points. \( \hat \theta \) is 
+the solution line, \( 1 + \theta x = y\).
 
 In code this would be ...
+
+<h2> Poker Example </h2>
+
+<p>From Kaggle, I downloaded a set of data about poker hands. The data classifies about 25K hands as 0 to 9. 
+The goal is to learn the rules of poker by just looking at the data. 
+
+<p> Time for <b>logistic regression.</b>
+
+<p> One versus All
+
 
 
 <script>
