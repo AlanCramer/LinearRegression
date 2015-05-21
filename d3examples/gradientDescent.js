@@ -65,9 +65,15 @@ function costFnLogisticRegression(hypothFn, data) {
     
     var m = data.length;
     var sum = 0;
+    var eps = .000001;
     
     data.forEach(function(pt, i) {  
-        sum += pt.y * Math.log(hypothFn(pt.x)) + (1-pt.y) * Math.log(1-hypothFn(pt.x));
+        var t = hypothFn(pt.x);
+        
+        if (t > eps && t < (1-eps)) {
+            var t3 = pt.y ? Math.log(t) : Math.log(1-t);
+            sum += t3;
+        }
     });
     sum *= -1/m;
     
@@ -112,6 +118,11 @@ function logisticGradientDescent(data, maxIter) {
         errorData.push({x:ct, y:err});     
         ct++;        
     }
+    
+    // de-prep the data by removing that first element 1 we added
+    data.forEach(function(pt, i) {
+        pt.x.splice(0,1); 
+    });
     
     return {theta:theta, errorData: errorData};
 }
