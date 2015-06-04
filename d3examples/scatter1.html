@@ -173,7 +173,7 @@ error chart again.
 
 <h3> One versus All </h3>
 Logistic regression will separate one variable from another. That is it will classify in a binary way.
-For poker hands we have 9 classifications. So I'll use a "one vs the rest" approach. Which will try to 
+For poker hands we have 10 classifications. So I'll use a "one vs the rest" approach. Which will try to 
 divide up the various hands. Before going on to the actual data, let's try this on test data with 
 3 values (say 0 1 and 2) and see what happens. Here's the next test chart.
 
@@ -192,6 +192,9 @@ But the triangle in the middle (which happens to have 1 green dot) is "no-dot's 
 classify new data that appears in the center? Hmm. In this case, it sure seems like those dots 
 should be green. That is, we could see what data is in no-dot land. Or, we can ask which lines 
 failed to truly classify all of that color.
+<li> Another way to look at it might be, we don't need the green line. If we only used the red
+and blue lines, we separate the space into 4 regions: green-land, blue-land, red-land and 
+unclaimed-land across from green.
 <li> Question: is there a test we could run to see if this style of logistic regression would 
 give a good result? Maybe we can know ahead of time whether this will be a useful technique to run. 
 <li> Some regions of space are 1 of 2 classes. Consider the region that contains the point (0,1). 
@@ -209,7 +212,7 @@ that we can know if the classification worked well.
 <h3>Polynomial Regression</h3>
 
 <p> Looking at the artificial r-g-b data above, it seems like it would be nice to find a polynomial 
-fit for the green data. It seems like a nice parabola or ellipse (axis not parallel to coordinate axes) would
+fit for the green data. It seems like a nice parabola, ellipse or maybe hyperbola (axis not parallel to coordinate axes) would
 do the trick. So instead of the first order fit 
 \[g(\theta) = \theta_0 + \theta_1x_1 + \theta_2x_2\] 
 let's try a second order fit: 
@@ -219,7 +222,12 @@ let's try a second order fit:
 <button onclick="OnRunGreenPolyRegress()">Run Green Polynomial Regress</button>
 <p><svg class="logPolyTest"></svg> 
 <p> \(\theta\) is : <span id="greenClassPolyTheta"></span>
-<p> now, how to plot that?
+<p> To plot this, I guess I would sample either axis (maybe \(x_1\) along the \(x_1\) domain). 
+For each sample point, the second order expression reduces to a quadradic in 
+one variable. That is, we should generally get 2 values (\(x_2\) values) for each sample.
+Assuming those \(x_2\)'s fall in the vertical axis's domain, we should get a plot. 
+<p> I would like to see what the conic section will look like for different errors. Sigh, that's
+a bit of work to get that going. 
 
 
 <h3> Back to the Rules of Poker </h3>
@@ -234,9 +242,9 @@ we'll get 11 \(\theta_i\) values for each class. Then we can evaluate \(h_\theta
 you may remember, h is the sigmoid function:
 \[ h_\theta (\mathbf x) =  \frac{1}{1+e^\mathbf{\theta^T x}}\]
 
-<p> So we will hopefully have 9 \(\theta\) vectors (each of dimension 11), and thus 11 \(h_\theta(x)\) 
-functions. We could call them by their identifying 'skills'. For a given hand, they will each produce
-a value from 0 to 1 indicating the probability that the hand is
+<p> So we will hopefully have 10 \(\theta\) vectors (each of dimension 11), and thus 10 
+\(h_\theta(x)\) functions. We could call them by their identifying 'skills'. For a given hand, 
+they will each produce a value from 0 to 1 indicating the probability that the hand is
 <li> high card
 <li> one pair
 <li> two pair
@@ -253,19 +261,27 @@ Well, let's find out when we get there.
 
 <p> One versus Rest, let's see if we can figure out the flush rule.
 
-<p> This could take a while ....
+<p> This could take a while .... (Progress Bar ToDo - btw, populate graph as progress bar?)
 <p><button onclick="runPokerClassification(5)">Run Flush Classification</button>
-<p> 
+<p> \(\theta\) comes out to be: <span id="flushTheta"></span>
 
+<h3> Error of Linear Regression, 250 iterations</h3>
+<p><svg class="errorChart2"></svg>
+<p> 
 <p>So this will attempt to classify a particular hand type, for example, flushes. We can then
 ask - How did that go? If it went well, then of the training data, all hands that classify as 
-flushes are actually flushes. And all other hands are not flushes. Looking at the green data
+flushes are actually flushes. And all other hands are not flushes. Remembering the green data
 above, we know this might not be the case. 
-<p> The errors are bad (always zero, needs debugging (TODO)). 
+
 <p> Theta ends up being something. So we can then ask, did we get all the flushes? And did
-any other hand type turn out to be classified as a flush? If the answers are yes and no respectively,
-then we have a bit of confidence that we "understand" the flush rule. (TODO)
-<p> 
+any other hand type turn out to be classified as a flush? If the answers are 
+yes and no respectively, then we have a bit of confidence that we "understand" the flush 
+rule. (TODO)
+<p>
+
+<p><svg class="flushThetaGraph"></svg>
+
+
 <p>
 
 <script>
@@ -318,6 +334,14 @@ var data = [{x:1, y:2}, {x:2, y:1}, {x:3, y:3.5}, {x:4, y:3}, {x:5, y:4.5},
     {x:0.5, y:1}, {x:1.5, y:2}, {x:2.5, y:1.5}, {x:3.5, y:5}, {x:4.5, y:3}]; 
     
 var lsChartInfo = addScatterPlot(".leastSquaresChart", data,"","");
+
+lsChartInfo.chart.on("click", function() {
+   var d3that = d3.select(this);
+   var squares = d3that.selectAll(".sqDelta")
+       .style("opacity", 0);
+   var lines = d3that.selectAll(".sqLines")
+       .attr("stroke", "white");   
+});
 
 addFitLine(lsChartInfo.chart, 1, .25, lsChartInfo.xscale, lsChartInfo.yscale, "green");
 //addFitLine(lsChartInfo.chart, .5, .5, lsChartInfo.xscale, lsChartInfo.yscale, "purple");
@@ -378,6 +402,7 @@ function runColorVsAll(classId, color) {
 
     var t = res.theta;
     addFitLine(ci3class.chart, -t[0]/t[2], -t[1]/t[2], ci3class.x0scale, ci3class.x1scale, color);
+
 }
  
 var ciGreenPoly = setUp2DChart(".logPolyTest", logReg3ClassData, "x0", "x1"); 
@@ -402,7 +427,7 @@ function OnRunGreenPolyRegress() {
         cloneData.push({x:newx, y:newy});
     });
     
-    var res = logisticGradientDescent(cloneData, 100);
+    var res = logisticGradientDescent(cloneData, 200);
     console.log(res);
     var spanelem = document.getElementById("greenClassPolyTheta");
     spanelem.textContent = res.theta.toString();

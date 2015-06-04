@@ -38,6 +38,18 @@ function logisticRegFit(theta) {
     };
 }
 
+function thetaTransposeX(theta) {
+
+    return function(x) { // x is an (n-1)dimensional array, but theta is n dimensional
+       
+        // calculate the dot product
+        var sum = theta[0];
+        x.forEach( function (xi, i) { sum += theta[i+1]*xi } );  
+
+        return sum;
+    };
+}
+
 // this is referred to as J(theta) where theta is a n-vector
 // data is an array of m objects, each with an x array of length n, and a y value
 // That is, data[i]= {x:[0..n], y:y_i]}
@@ -61,7 +73,8 @@ function costFnSumSquares(hypothFn, data) {
 // 
 // https://www.coursera.org/learn/machine-learning/lecture/MtEaZ/simplified-cost-function-and-gradient-descent
 // minute 4:09
-function costFnLogisticRegression(hypothFn, data) {
+// theta is imbedded in hypothFn but explicitly required too
+function costFnLogisticRegression(theta, hypothFn, data) {
     
     var m = data.length;
     var sum = 0;
@@ -75,7 +88,17 @@ function costFnLogisticRegression(hypothFn, data) {
             sum += t3;
         }
     });
-    sum *= -1/m;
+    
+    // regularization factor
+    // more than just reduce overfitting of a high order polynomial,
+    // this seems to reduce the need for a high precision error
+    var lambda = 1;
+    var thetaSqSum = 0;
+    theta.forEach(function(t) { thetaSqSum += t*t; });
+    sum += lambda*thetaSqSum/2;
+
+    // both terms divide by number of data points
+    sum *= 1/m; 
     
     return sum;
 }
@@ -109,14 +132,16 @@ function logisticGradientDescent(data, maxIter) {
     var errorData = [];
     
     while(ct < maxIter) {
-        
-        var theta = gradientDescentStep(hyp, theta, alpha, data);
+
+        theta = gradientDescentStep(hyp, theta, alpha, data);
              
         hyp = logisticRegFit(theta);
         
-        var err = costFnLogisticRegression(hyp, data);
-        errorData.push({x:ct, y:err});     
-        ct++;        
+        var err = costFnLogisticRegression(theta, hyp, data);
+        
+        errorData.push({x:ct, y:err});   
+              
+        ct++;          
     }
     
     // de-prep the data by removing that first element 1 we added

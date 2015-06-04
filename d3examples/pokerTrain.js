@@ -32,12 +32,47 @@ function runPokerClassification(handType) {
 function OnPokerDataLoaded(data) {
     
     console.log(data.length);
-    var res = logisticGradientDescent(data, 100);
+    var res = logisticGradientDescent(data, 250);
 
-    var t = res.theta;
-    console.log(t);
-    
+    // report result
+    var thetaSpan = document.getElementById("flushTheta");
+    var formattedTheta = [];
+    res.theta.forEach(function(t) { formattedTheta.push(t.toFixed(1)); });
+    var msg = "[" + formattedTheta.join('   ') + "]"; // todo, &nbsp;&nbsp is not processed but how to have more space here
+    thetaSpan.textContent = msg;
    
+    var ec = addScatterPlot(".errorChart2", res.errorData, "Number of Iterations", "Error");
+    
+    addFlushThetaGraph(res.theta, data);
 }
+
+
+function addFlushThetaGraph(theta, data) {
+    
+    var separaterEval = [];
+    var hyp = thetaTransposeX(theta);
+    
+    data.forEach(function(d, i) {
+        var isFlush = (d["hand"] === 5);
+        separaterEval.push({x:i, y:hyp(d.x), isFlush:isFlush });
+    });
+    
+    var ci = setUpChartPosNeg(".flushThetaGraph", separaterEval, "\(\theta^Tx\)", "Error");
+        
+    ci.chart.selectAll(".bub")
+      .data(separaterEval)
+    .enter().append("circle")
+      .attr("class", "bub")
+      .attr("cx", function(d) { return ci.xscale(d.x); })
+      .attr("cy", function(d) { return ci.yscale(d.y); })
+      .attr("fill", function(d) { return d.isFlush ? "midnightblue" : "steelblue"})
+      .attr("r", function(d) {  return d.isFlush ? 4 : 1})
+    ;
+    
+}
+
+
+
+
 
  

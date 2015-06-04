@@ -134,6 +134,77 @@ function setUp2DChart(chartname, data, xAxisLabel, yAxisLabel) {
 };
 
 
+// oh the painful duplication!!
+// chart for negative to positive y value. The diff is the y scale.
+function setUpChartPosNeg(chartname, data, xAxisLabel, yAxisLabel) {
+        
+    var xlabel = xAxisLabel || "x-axis Label";
+    var ylabel = yAxisLabel || "y-axis Label";
+
+    var margin = {top: 20, right: 20, bottom: 30, left: 60},
+        width = 900 - margin.left - margin.right,
+        height = 450 - margin.top - margin.bottom;
+    
+    var chart = d3.select(chartname)
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        
+    var x = d3.scale.linear()
+        .domain([0, d3.max(data, function(d) { return d.x; })])
+        .range([0, width]);
+
+    var y = d3.scale.linear()
+        .domain([d3.min(data, function(d) { return d.y; }), d3.max(data, function(d) { return d.y; })])
+        .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom")
+        .tickSize([6]);
+
+    var xAxis2 = d3.svg.axis()
+        .scale(x)
+        .orient("middle");
+        
+    var yAxis = d3.svg.axis()
+        .scale(y)
+        .orient("left")
+        .ticks(10);
+    
+    chart.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+    .append("text")
+      .attr("transform", "translate(0, 30)")
+      .attr("x", width)
+      .attr("dx", ".71em")
+      .style("text-anchor", "end")
+      .text(xlabel);
+
+    chart.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("line")       // origin line
+      .attr("y1", y(0))
+      .attr("y2", y(0))
+      .attr("x1", 0)
+      .attr("x2", width)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text(ylabel)
+    ;
+      
+    return {chart:chart, xscale:x, yscale:y};
+};
+
+
+
 
 function addSquareDeltas(chartInfo, data, t0, t1) {
     
