@@ -30,11 +30,11 @@ function logisticRegFit(theta) {
     return function(x) { // x is an n-dimensional array
        
         // calculate the dot product
-        var sum = 0;
-        x.forEach( function (xi, i) { sum += theta[i]*xi } );
+        var sum3 = 0;
+        x.forEach( function (xi, i) { sum3 += theta[i]*xi } );
         
         // return sigmoid function of dot product
-        return 1/(1+ Math.exp(-sum));
+        return 1/(1+ Math.exp(-sum3));
     };
 }
 
@@ -43,10 +43,10 @@ function thetaTransposeX(theta) {
     return function(x) { // x is an (n-1)dimensional array, but theta is n dimensional
        
         // calculate the dot product
-        var sum = theta[0];
-        x.forEach( function (xi, i) { sum += theta[i+1]*xi } );  
+        var sum2 = theta[0];
+        x.forEach( function (xi, i) { sum2 += theta[i+1]*xi } );  
 
-        return sum;
+        return sum2;
     };
 }
 
@@ -92,21 +92,22 @@ function costFnLogisticRegression(theta, hypothFn, data) {
     // regularization factor
     // more than just reduce overfitting of a high order polynomial,
     // this seems to reduce the need for a high precision error
-    var lambda = 1;
-    var thetaSqSum = 0;
-    theta.forEach(function(t) { thetaSqSum += t*t; });
-    sum += lambda*thetaSqSum/2;
+    // var lambda = 1;
+    // var thetaSqSum = 0;
+    // theta.forEach(function(t) { thetaSqSum += t*t; });
+    // sum += -1*lambda*thetaSqSum/2;
 
     // both terms divide by number of data points
-    sum *= 1/m; 
+    sum *= -1/m; 
     
     return sum;
 }
 
 // minimize J(theta), where J is a cost function
 // Jpartials is an array of functions, the partial derivatives with respect to theta[i]
+// alpha is optional input - defaults to .1
 //
-function logisticGradientDescent(data, maxIter) {
+function logisticGradientDescent(data, maxIter, alpha) {
        
     // https://www.coursera.org/learn/machine-learning/lecture/kCvQc/gradient-descent-for-linear-regression
     // at minute 3:30
@@ -124,7 +125,7 @@ function logisticGradientDescent(data, maxIter) {
         theta[ti] = 0;
     }
     
-    var alpha = .1;
+    alpha = alpha || .1; // default value if not defined
     var hyp = logisticRegFit(theta);
     
     var done = false;
@@ -139,7 +140,7 @@ function logisticGradientDescent(data, maxIter) {
         
         var err = costFnLogisticRegression(theta, hyp, data);
         
-        errorData.push({x:ct, y:err});   
+        errorData.push({x:ct, y:err, t:theta});   
               
         ct++;          
     }

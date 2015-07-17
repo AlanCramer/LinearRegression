@@ -1,17 +1,517 @@
-<html>
-  
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+
+
 <head>
-    <script src="scraper.js"></script>
-    <script src="jquery-2.1.1.min.js"></script>
-</head>  
+    <script src="vendor/d3.min.js"></script>
+    <script src="vendor/numeric-1.2.6.min.js"></script>
+    <script src="vendor/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript"
+        src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    
+    <script src="js/regress.js"></script>
+    <script src="js/gradientDescent.js"></script>
+    <script src="js/addChart.js"></script>
+    <script src="js/pokerTrain.js"></script>
+        <style>
+
+body {
+    font-family:sans-serif;
+}
+
+#alphaInput {
+    -webkit-appearance: slider-vertical;
+    width: 20px;
+    height: 200px;
+}
+
+.bar {
+  fill: steelblue;
+}
+
+.sqDelta {
+
+  fill: #31B404;
+  opacity: .05;
+}
+.overlay {
+  fill: none;
+  pointer-events: all;
+}
+.leastSquaresChart:hover .sqDelta{
+
+    opacity: .15;
+}
+
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+button {
+    background-color: steelblue;
+    color: #ffffff;
+    font-family:Arial;
+    font-size:15px;
+    padding:5px 25px;
+    border-radius:15px;
+    border:#000000;
+}
+    
+button:hover {
+	background-color:#2299dd;
+}
+
+
+li {
+    list-style-type:none;
+}
+li:before { content: "-" };
+
+
+</style>
+</head>
 
 <body>
 
-  <p> hi </p>
-  <p> Let's scrape <a href="http://www.realtor.com/soldhomeprices/Lynnfield_MA"> Realtor.com </a></p>
+<h1> Machine Learning </h1>
 
-  <button onclick="ScrapeIt()"> Do it! </button>
-  <label id="result">I'm here</label>
+<h2> Least Squares </h2>
+
+<p>How best to interpolate a set of data? 
+<li> Pick the form of the interpolation curve (e.g. line, circle, parabola, piecewise linear, biarcs), 
+<li> define a cost function that describes how far off the interpolation curve is, 
+<li> and then find the solution that minimizes the cost function.
+
+<p>A classic example: linear least squares. That is, given a set of points \(\{(x_i, y_i)\}\) find the line that best fits the data by minimizing the 
+sum of the squares of the errors.
+
+<p> Here's an example chart, the dots are the data points. There are 2 arbitrary lines drawn and the
+sum of the squares of the distances are shown. The question is, which line is better? And, out
+of all lines, which is best?
+
+<p><center><svg class="leastSquaresChart"></svg></center>
+
+<p> Let's repeat this in a mathematical notation: 
+\[  \min_{\theta_0, \theta_1} \sum (h(x_i) - y_i)^2 \quad \text{ where } h(x) = \theta_0 + \theta_1x \]
+
+<p> This process is not symmetric. Y we are looking at how far the y value is from the data. What happens
+if we flip x and y - do we get the same line? Actually, no.
+
+<p> Maybe we should be looking at the perpendicular distance to each data point.
+
+<p> Some gotchas/questions:
+<li> What happens if we flip x and y? do we get the same line? 
+<li> Are we just considering how far the y's are from the line or is there an error with x as well?
+<li> Should we be trying for the perpendicular distance instead of the y distance?
+<li> Why sum of squares? Why not sum of cubes? Something else?
+<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Answer hints: Positive, radially symmetric, same answer as euclidean distance
+
+<p> Some extensions:
+<li> What if we want to interpolate with something other than a line?
+<li> What if the data is multi-dimensional? Find a plane that fits a set of points in \(\mathbb R^3\).
+In general, find a hyperplane that fits some n-dimensional data.
+
+
+<p> References
+<li>  Andrew Ng's excellent Coursera course on Machine Learning.
+<li>  Wikipedia
+
+<p>Let's give it a try - load a data file, and a gradient descent algorithm will iterate to a solution. 
+(or not). Two charts will appear, the first shows the data, and the second shows the magnitude of the 
+error. 
+<br><br><br>
+
+<button id="loadData" onclick="OnLoadData()">Load Data File</button>
+<span id="bub"> Status Info </span>
+<br>
+<svg class="dataChart"></svg>
+<svg class="errorChart"></svg>
+<input type="file" id="opendatafile" name="datafile" style="display:none"/>
+
+<p> More questions
+<li> Seems like the line quickly finds a pivot point and then takes a long time to find the y-intercept.
+Is that always how it goes? 
+
+<h2> Normal Equations </h2>
+
+For a linear fit, we can find the exact solution to the least squares problem. That is, we don't have
+to use an iterative approach like the gradient descent.
+
+The cost function (listed above) is a function that we want to minimize. To minimize it, take the
+derivative and set it to zero. The function is convex, so we get only one local minimum. Very convenient.
+This results in the equation
+
+\[ \left( \mathbf {X^TX} \right) \mathbf {\hat \theta} = \mathbf {X^Ty} \] 
+
+Solving for \(\hat \theta\), 
+
+\[  \mathbf {\hat \theta} = \left( \mathbf {X^TX} \right)^{-1} \mathbf {X^Ty} \] 
+
+// REVIEW
+The concise mathematical representation is easy to get lost in. X is a matrix with first column all ones,
+the second column is \(x_i\). So it's n x 2, where n is the number of data points. \( \hat \theta \) is 
+the solution line, \( 1 + \theta x = y\).
+
+In code this would be ...
+
+<h2> Poker Example </h2>
+
+<p>From Kaggle, I downloaded a set of data about poker hands. The data classifies about 25K hands as 0 to 9. 
+The goal is to learn the rules of poker by just looking at the data. 
+
+<p> Time for <b>logistic regression.</b>
+
+<p> Let's test my implementation of logisticGradientDescent by creating some test data that
+looks like the chart below. Now, we can run the logistic gradient descent on the same data and see what we get
+for \(\hat \theta\). Push the button to see the separation curve. Might be cool to add the 
+error chart again.
+
+<p><button onclick="OnRunLogisticRegTest()">Run Logistic Regression</button>
+<p><svg class="logRegTest"></svg>
+
+<p>
+<p>
+
+<h3> One versus All </h3>
+Logistic regression will separate one variable from another. That is it will classify in a binary way.
+For poker hands we have 10 classifications. So I'll use a "one vs the rest" approach. Which will try to 
+divide up the various hands. Before going on to the actual data, let's try this on test data with 
+3 values (say 0 1 and 2) and see what happens. Here's the next test chart.
+
+<p>
+<button onclick="OnRunGreenVsAll()">Run Green Vs All</button>
+<button onclick="OnRunRedVsAll()">Run Red Vs All</button>
+<button onclick="OnRunBlueVsAll()">Run Blue Vs All</button>
+
+<div class="container" style="float:left">
+   <input id="alphaInput" type="range" id="range" min=".01" max="1" step=".01" value=".1"  onchange="OnAlphaChange(this.value)" />
+   <input type="text" id="sliderTextInput" value="">
+   
+   <svg class="logReg3Classes" ></svg>
+   <svg id="thetaCost3Class"></svg>
+   <svg id="logReg3ClassError"></svg>
+</div>
+<p style="clear:both">
+
+<p> Couple things to note. 
+<li> First, each line divides the space into 2 regions. 
+Lines seem so limiting. The region is not always going to divide nicely like this example.
+Seems like we need piecewise linear dividers or polynomial regression.
+<li> Second, in this case, it's pretty good. Most of space is either clearly red, green or blue. 
+But the triangle in the middle (which happens to have 1 green dot) is "no-dot's land." How to 
+classify new data that appears in the center? Hmm. In this case, it sure seems like those dots 
+should be green. That is, we could see what data is in no-dot land. Or, we can ask which lines 
+failed to truly classify all of that color.
+<li> Another way to look at it might be, we don't need the green line. If we only used the red
+and blue lines, we separate the space into 4 regions: green-land, blue-land, red-land and 
+unclaimed-land across from green.
+<li> Question: is there a test we could run to see if this style of logistic regression would 
+give a good result? Maybe we can know ahead of time whether this will be a useful technique to run. 
+<li> Some regions of space are 1 of 2 classes. Consider the region that contains the point (0,1). 
+This is the "I am red" and "I am green" area. So we really only know it's not blue. Hard to guess
+beyond that. 
+<li> There is no consideration of proximity. For example, (0,0) is in the either red or green area. 
+But it seems much more likely to be red, because of the proximity. Enhancement?
+
+<p> I'm surprised that the course did not mention the idea of separating say green from red and
+then green from blue and intersecting the 2 half plane. This would produce a convex shape 
+containing the green data, with a piecewise linear (generally, a piecewise hyperplane) boundary.
+<p> This still might have issues. Two classes might not separate nicely. What then? But the key is
+that we can know if the classification worked well. 
+
+<h3>Polynomial Regression</h3>
+
+<p> Looking at the artificial r-g-b data above, it seems like it would be nice to find a polynomial 
+fit for the green data. It seems like a nice parabola, ellipse or maybe hyperbola (axis not parallel to coordinate axes) would
+do the trick. So instead of the first order fit 
+\[g(\theta) = \theta_0 + \theta_1x_1 + \theta_2x_2\] 
+let's try a second order fit: 
+\[g(\theta) = \theta_0 + \theta_1x_1 + \theta_2x_2 + \theta_3x_1x_2 + \theta_4x_1^2 +\theta_5x_2^2\]
+
+<p>
+<button onclick="OnRunGreenPolyRegress()">Run Green Polynomial Regress</button>
+<p><svg class="logPolyTest"></svg> 
+<p> \(\theta\) is : <span id="greenClassPolyTheta"></span>
+<p> To plot this, I guess I would sample either axis (maybe \(x_1\) along the \(x_1\) domain). 
+For each sample point, the second order expression reduces to a quadradic in 
+one variable. That is, we should generally get 2 values (\(x_2\) values) for each sample.
+Assuming those \(x_2\)'s fall in the vertical axis's domain, we should get a plot. 
+<p> I would like to see what the conic section will look like for different errors. Sigh, that's
+a bit of work to get that going. 
+
+
+<h3> Back to the Rules of Poker </h3>
+<p> Are we ready to get back to poker rules? The data here is much bigger. And we have 10 classes.
+Because each data point has 5 cards each with a suit and rank, there is no good way to graph it.
+We almost might do it in 3D, with each axis representing a suit, and the value along the axis. 
+But that only (almost) represents a card. Nope. The 10 dimensional (5 cards each with suit and rank)
+input space is just too high.
+
+<p> Happily, the algorithm should work just fine. What does the output mean though? Hopefully,
+we'll get 11 \(\theta_i\) values for each class. Then we can evaluate \(h_\theta (x_i)\) where 
+you may remember, h is the sigmoid function:
+\[ h_\theta (\mathbf x) =  \frac{1}{1+e^\mathbf{\theta^T x}}\]
+
+<p> So we will hopefully have 10 \(\theta\) vectors (each of dimension 11), and thus 10 
+\(h_\theta(x)\) functions. We could call them by their identifying 'skills'. For a given hand, 
+they will each produce a value from 0 to 1 indicating the probability that the hand is
+<li> high card
+<li> one pair
+<li> two pair
+<li> 3 of a kind
+<li> straight
+<li> flush
+<li> full house
+<li> 4 of a kind
+<li> straight flush
+<li> royal flush
+<p> Ideally each new point will have one, and only one h function return a value greater than .5.
+What to do if (a) more than one h function is greater than .5? Or, (b), none are greater than .5?
+Well, let's find out when we get there. 
+
+<p> One versus Rest, let's see if we can figure out the flush rule.
+
+<p> This could take a while .... (Progress Bar ToDo - btw, populate graph as progress bar?)
+<p><button onclick="runPokerClassification(5)">Run Flush Classification</button>
+<p> \(\theta\) comes out to be: <span id="flushTheta"></span>
+
+<h3> Error of Linear Regression, 250 iterations</h3>
+<p><svg class="errorChart2"></svg>
+<p> 
+<p>So this will attempt to classify a particular hand type, for example, flushes. We can then
+ask - How did that go? If it went well, then of the training data, all hands that classify as 
+flushes are actually flushes. And all other hands are not flushes. Remembering the green data
+above, we know this might not be the case. 
+
+<p> Theta ends up being something. So we can then ask, did we get all the flushes? And did
+any other hand type turn out to be classified as a flush? If the answers are 
+yes and no respectively, then we have a bit of confidence that we "understand" the flush 
+rule. (TODO)
+<p>
+
+<p><svg class="flushThetaGraph"></svg>
+
+
+<p>
+
+<script>
+    window.onload = function() {
+        document.getElementById('opendatafile').addEventListener('change', loadDataFile, false);
+    };
+    
+    function updateTextInput(val) {
+      document.getElementById('sliderTextInput').value=val; 
+    };
+    
+    function OnLoadData() {
+        var fileElem = document.getElementById("opendatafile");
+        fileElem.click();
+    }; 
+    
+    var loadDataFile = function (evt) {
+    
+        var files = evt.target.files; // FileList object
+        var file = files[0];
+        
+        var fileReadAsDataUrl = new FileReader();
+        fileReadAsDataUrl.onload = (function(progEvt) {
+            var dataString = progEvt.target.result;
+            var tsv64 = dataString.replace("data:;base64,", "");
+            var tsv = atob(tsv64);
+            var data = d3.tsv.parse(tsv, type);
+            
+            // plot the data
+            var dataPlotInfo = addScatterPlot(".dataChart", data);
+            var previewLine = {};
+            // calculate regress line and plot it
+            var res = regress2vec(data);
+            addFitLine(dataPlotInfo.chart, res.t0, res.t1, dataPlotInfo.xscale, dataPlotInfo.yscale);
+            var ec = addScatterPlot(".errorChart", res.errorData, "Number of Iterations", "Error");
+            var ecBars = ec.chart.selectAll(".bar");
+            ecBars.on("mouseover", function (d) {
+                d3.select(this).attr("r", 6);
+                previewLine = addFitLine(dataPlotInfo.chart, d.t0, d.t1, dataPlotInfo.xscale, dataPlotInfo.yscale);
+               })
+              .on("mouseout", function () {
+                d3.select(this).attr("r", 3);
+                previewLine.remove();
+               });
+               
+        });
+        
+        fileReadAsDataUrl.readAsDataURL(file);    
+    };
+    
+
+// fill out the example chart
+var data = [{x:1, y:2}, {x:2, y:1}, {x:3, y:3.5}, {x:4, y:3}, {x:5, y:4.5},
+    {x:0.5, y:1}, {x:1.5, y:2}, {x:2.5, y:1.5}, {x:3.5, y:5}, {x:4.5, y:3}]; 
+    
+var lsChartInfo = addScatterPlot(".leastSquaresChart", data,"","");
+
+lsChartInfo.chart.on("click", function() {
+   var d3that = d3.select(this);
+   var squares = d3that.selectAll(".sqDelta")
+       .style("opacity", 0);
+   var lines = d3that.selectAll(".sqLines")
+       .attr("stroke", "white");   
+});
+
+addFitLine(lsChartInfo.chart, 1, .25, lsChartInfo.xscale, lsChartInfo.yscale, "green");
+//addFitLine(lsChartInfo.chart, .5, .5, lsChartInfo.xscale, lsChartInfo.yscale, "purple");
+
+addSquareDeltas(lsChartInfo, data, 1, .25);
+
+var logRegTestData = [ {x:[1,1], y:0}, {x:[.5,.25], y:0},{x:[.4,1.6], y:0},{x:[1.6,.75], y:0},
+   {x:[3,1], y:1}, {x:[2,3], y:1},{x:[1.7,3.2], y:1}, {x:[2.8 ,3], y:1}, {x:[2,2], y:1} ];
+
+var ci = setUp2DChart(".logRegTest", logRegTestData, "x0", "x1"); 
+    ci.chart.selectAll(".bar")
+      .data(logRegTestData)
+    .enter().append("circle")
+      .attr("fill", function(d) { return d.y === 1 ? "red" : "blue"} )
+      .attr("cx",   function(d) { return ci.x0scale(d.x[0]); })
+      .attr("cy",   function(d) { return ci.x1scale(d.x[1]); })
+      .attr("r", 5);
+      
+function OnRunLogisticRegTest() {      
+    var res = logisticGradientDescent(logRegTestData, 100);
+
+    var t = res.theta;
+    addFitLine(ci.chart, -t[0]/t[2], -t[1]/t[2], ci.x0scale, ci.x1scale, "purple")
+}
+
+// 0 = red, 1 = blue, 2 = green
+var logReg3ClassData = [ {x:[1,1], y:0}, {x:[.5,.25], y:0},{x:[1.4,0.6], y:0},{x:[1.6,.75], y:0},
+   {x:[3,1], y:1}, {x:[2,3], y:1},{x:[1.7,2.8], y:1}, {x:[2.8 ,3], y:1}, {x:[2,2], y:1},
+   {x:[1,2], y:2}, {x:[.5,2.5], y:2},{x:[1.2,2.8], y:2}, {x:[1.5,2.5], y:2}, {x:[1.4,1.5], y:2}   ];
+
+var ci3class = setUp2DChart(".logReg3Classes", logReg3ClassData, "x0", "x1"); 
+    ci3class.chart.selectAll(".bar")
+      .data(logReg3ClassData)
+    .enter().append("circle")
+      .attr("fill", function(d) { return d.y === 0 ? "red" : d.y === 1 ? "blue" : "green"} )
+      .attr("cx",   function(d) { return ci3class.x0scale(d.x[0]); })
+      .attr("cy",   function(d) { return ci3class.x1scale(d.x[1]); })
+      .attr("r", 5);      
+      
+function OnRunGreenVsAll() {      
+    runColorVsAll(2, "green");
+}    
+function OnRunRedVsAll() {      
+    runColorVsAll(0, "red");
+}     
+function OnRunBlueVsAll() {      
+    runColorVsAll(1, "blue");
+}  
+
+function OnAlphaChange(val) {
+    updateTextInput(val);
+}
+
+function runColorVsAll(classId, color) {
+
+    var cloneData = [];
+    logReg3ClassData.forEach(function(pt, i) {
+        var newy = (pt.y === classId) ? 1 : 0;
+        cloneData.push({x:pt.x, y:newy});
+    });
+    
+    var alpha = document.getElementById("alphaInput").value;
+    var res = logisticGradientDescent(cloneData, 100, alpha);
+
+    var t = res.theta;
+    addFitLine(ci3class.chart, -t[0]/t[2], -t[1]/t[2], ci3class.x0scale, ci3class.x1scale, color);
+
+    addThetaCostGraph("#thetaCost3Class", t, cloneData, 300, 300, 5, 5);
+    
+        // erase the previous
+    d3.select("#logReg3ClassError").selectAll("*").remove();
+    var ec = addScatterPlot("#logReg3ClassError", res.errorData, "Number of Iterations", "Error", 300, 300);
+//    var ecBars = ec.chart.selectAll(".bar");
+//    ecBars.on("mouseover", function (d) {
+//        d3.select(this).attr("r", 6);
+//        previewLine = addFitLine(ci3class.chart, -d.t[0]/d.t[2], -d.t[1]/d.t[2],ci3class.x0scale, ci3class.x1scale, color);
+//       })
+//      .on("mouseout", function () {
+//        d3.select(this).attr("r", 3);
+//        previewLine.remove();
+//       });
+
+var focus = ec.chart.append("g")
+      .attr("class", "focus")
+      .style("display", "none");
+
+  focus.append("circle")
+      .attr("r", 4.5);
+
+  focus.append("text")
+      .attr("x", 9)
+      .attr("dy", ".35em");
+
+  ec.chart.append("rect")
+      .attr("class", "overlay")
+      .attr("width", 300)
+      .attr("height", 300)
+      .on("mouseover", function() { focus.style("display", null); })
+      .on("mouseout", function() { focus.style("display", "none"); })
+      .on("mousemove", mousemove);
+
+  function mousemove() {
+    console.log(ec.xscale.invert(d3.mouse(this)[0]));
+    //var x0 = xscale.invert(d3.mouse(this)[0]);
+    //focus.attr("transform", "translate(" + x(x0) + "," + y(x0) +")");
+//       i = bisectDate(data, x0, 1),
+//       d0 = data[i - 1],
+//       d1 = data[i],
+//       d = x0 - d0.date > d1.date - x0 ? d1 : d0;
+//   focus.attr("transform", "translate(" + x(d.date) + "," + y(d.close) + ")");
+//   focus.select("text").text(formatCurrency(d.close));
+  }
+               
+
+}
+ 
+var ciGreenPoly = setUp2DChart(".logPolyTest", logReg3ClassData, "x0", "x1"); 
+    ciGreenPoly.chart.selectAll(".bar")
+      .data(logReg3ClassData)
+    .enter().append("circle")
+      .attr("fill", function(d) { return d.y === 0 ? "red" : d.y === 1 ? "blue" : "green"} )
+      .attr("cx",   function(d) { return ciGreenPoly.x0scale(d.x[0]); })
+      .attr("cy",   function(d) { return ciGreenPoly.x1scale(d.x[1]); })
+      .attr("r", 5); 
+ 
+function OnRunGreenPolyRegress() {
+
+    var cloneData = [];
+    logReg3ClassData.forEach(function(pt, i) {
+        var newy = (pt.y === 2) ? 1 : 0;
+        var newx = pt.x.slice(0); // copy the array
+        newx.push(pt.x[0]*pt.x[1]);
+        newx.push(pt.x[0]*pt.x[0]);
+        newx.push(pt.x[1]*pt.x[1]);
+        
+        cloneData.push({x:newx, y:newy});
+    });
+    
+    var res = logisticGradientDescent(cloneData, 200);
+    console.log(res);
+    var spanelem = document.getElementById("greenClassPolyTheta");
+    spanelem.textContent = res.theta.toString();
+}
+   
+
+
+
+</script>
 </body>
-
-</html>

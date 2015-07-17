@@ -43,34 +43,8 @@ function OnPokerDataLoaded(data) {
    
     var ec = addScatterPlot(".errorChart2", res.errorData, "Number of Iterations", "Error");
     
-    addFlushThetaGraph(res.theta, data);
+    addThetaCostGraph(".flushThetaGraph", res.theta, data);
 }
-
-
-function addFlushThetaGraph(theta, data) {
-    
-    var separaterEval = [];
-    var hyp = thetaTransposeX(theta);
-    
-    data.forEach(function(d, i) {
-        var isFlush = (d["hand"] === 5);
-        separaterEval.push({x:i, y:hyp(d.x), isFlush:isFlush });
-    });
-    
-    var ci = setUpChartPosNeg(".flushThetaGraph", separaterEval, "\(\theta^Tx\)", "Error");
-        
-    ci.chart.selectAll(".bub")
-      .data(separaterEval)
-    .enter().append("circle")
-      .attr("class", "bub")
-      .attr("cx", function(d) { return ci.xscale(d.x); })
-      .attr("cy", function(d) { return ci.yscale(d.y); })
-      .attr("fill", function(d) { return d.isFlush ? "midnightblue" : "steelblue"})
-      .attr("r", function(d) {  return d.isFlush ? 4 : 1})
-    ;
-    
-}
-
 
 
 
